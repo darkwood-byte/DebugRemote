@@ -46,7 +46,15 @@ pico_enable_stdio_usb(DebugRemote 0)
 
 # Add the standard library to the build
 target_link_libraries(DebugRemote
-        pico_stdlib)
+        pico_stdlib
+        pico_cyw43_arch
+        pico_cyw43_driver
+        pico_lwip_nosys
+        pico_cyw43_arch_lwip_threadsafe_background 
+        hardware_adc 
+        pico_lwip_mbedtls 
+        pico_lwip_mqtt
+        )
 
 # Add the standard include files to the build
 target_include_directories(DebugRemote PRIVATE

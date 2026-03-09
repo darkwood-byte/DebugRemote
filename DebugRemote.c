@@ -4,6 +4,7 @@
 #include "hardware/timer.h"
 #include "ssd1306.h"
 #include "hardware2.h"
+#include "pico/cyw43_arch.h"
 
 #define SDA_PIN 8
 #define SCL_PIN 9
@@ -11,7 +12,7 @@
 // ============================================================
 // CALLBACKS — vul deze functies zelf in
 // ============================================================
-int r12 = 56;
+int r12 = 64;
 int r34 = 32;
 
 
@@ -20,18 +21,94 @@ bool p2 = false;
 bool p3 = false;
 bool p4 = false;
 
-void update(void){
+#define WIFI_SSID "Wifi breach v3"
+#define  WIFI_PASSWORD "spook2020"
+int mode = 0;
+void setings(void);
+
+bool wifi_chip_on = false;
+void connect(void){
+    mode = 1;
+    allrot_off();
+    set_status(CONECTING);
+    ssd1306_clear();
+    ssd1306_printf(4, 0,"WIFI SSID:");
+    ssd1306_printf(4, 10,"%s", WIFI_SSID);
+    ssd1306_update();
+    if(wifi_chip_on)cyw43_arch_deinit();
+     if (cyw43_arch_init()) {
+        wifi_chip_on = true;
+        set_status(ERROR);
+        ssd1306_printf(4, 20,"Failed to initialize Wi-Fi");
+        ssd1306_update();
+        uint64_t now = time_us_64();
+        uint64_t now = time_us_64();
+        while(time_us_64() - now < 2000000);
+    }
+    cyw43_arch_enable_sta_mode();
+
+    int result = cyw43_arch_wifi_connect_timeout_ms(
+        WIFI_SSID, 
+        WIFI_PASSWORD, 
+        CYW43_AUTH_WPA2_AES_PSK, 
+        30000
+    );
+
+    if (result){
+        cyw43_arch_deinit();
+        set_status(ERROR);
+        ssd1306_printf(4, 20,"Failed to initialize Wi-Fi");
+        ssd1306_update();
+        uint64_t now = time_us_64();
+        while(time_us_64() - now < 2000000);
+    }
+    setings();
+}
+void setings(void){
+    rot1_on();
+    rot2_on();
+    rot3_on();
+    rot4_on();
+    mode = 0;
     if(r12 < 0)r12 = 0;
     if(r12 > 116)r12 = 116;
     if(r34 < 0)r34 = 0;
     if(r34 > 56)r34 = 56;
     ssd1306_clear();
+    ssd1306_printf(0,6,"-------");
+    ssd1306_printf(0,26,"-------");
+    ssd1306_printf(0,46,"-------");
+    if(r34 < 8)ssd1306_printf(4,0,"CONNECT");
+    else ssd1306_printf(4,0,"connect");
+    if(r34 < 28 && r34 > 15)ssd1306_printf(4,20,"MOVE");
+    else ssd1306_printf(4,20,"move");
+    if(r34 < 48 && r34 > 35)ssd1306_printf(4,40,"PING");
+    else ssd1306_printf(4,40,"ping");
+    if(r34 > 50)ssd1306_printf(4,56,"HELP");
+    else ssd1306_printf(4,56,"help");
     if(p1){
         ssd1306_printf(r12,r34, "X-");
         p1 = false;
+        set_status(BUSSY);
+        if(r34 < 8)connect();
     }
-    else ssd1306_printf(r12,r34, "<-");
+    else{
+        set_status(READY);
+        ssd1306_printf(r12,r34, "<-");
+    } 
     ssd1306_update();
+}
+
+void update(void){
+    switch (mode)
+    {
+    case 0:
+        setings();
+        break;
+    
+    default:
+        break;
+    }
 }
 
 void rot1_rotated(void) {
@@ -129,7 +206,8 @@ void gpio_callback(uint gpio, uint32_t events) {
 
 int main() {
     stdio_init_all();
-
+    init_rot_status();
+    init_status_leds();
     // GPIO init — alle pins als input met pull-down
     for (int i = 0; i < NUM_PINS; i++) {
         gpio_init(pins[i]);
@@ -158,15 +236,16 @@ int main() {
     update();
 
     // LED test
-    init_rot_status();
-    init_status_leds();
     sleep_ms(1000);
-    set_status(BUSSY);  
     rot1_on();
+    sleep_ms(400);
     rot2_on();
+     sleep_ms(300);
     rot3_on();
+     sleep_ms(100);
     rot4_on();
-
+    sleep_ms(100);
+    set_status(READY);  
     while (1) {
         sleep_ms(1000);
     }
