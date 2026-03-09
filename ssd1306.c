@@ -1,5 +1,6 @@
 #include "ssd1306.h"
 #include "pico/stdlib.h"
+#include "font.h"
 
 static uint8_t buffer[SSD1306_WIDTH * SSD1306_HEIGHT / 8];
 static i2c_inst_t *i2c_port;
@@ -74,5 +75,46 @@ void ssd1306_update()
             data[i+1]=buffer[page*SSD1306_WIDTH+i];
 
         i2c_write_blocking(i2c_port,SSD1306_ADDR,data,SSD1306_WIDTH+1,false);
+    }
+}
+
+void ssd1306_printf(int x, int y, const char *fmt, ...)
+{
+    char str[128];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(str, sizeof(str), fmt, args);
+    va_end(args);
+
+    int cursor_x = x;
+    int cursor_y = y;
+
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        char c = str[i];
+
+        if (c == '\n')
+        {
+            cursor_x = x;
+            cursor_y += 8;
+            continue;
+        }
+
+        if (c < 32 || c > 127)
+            c = '?';
+
+        const uint8_t *glyph = font8x8_basic[c - 32];
+
+        for (int col = 0; col < 8; col++)
+        {
+            uint8_t line = glyph[col];
+            for (int row = 0; row < 8; row++)
+            {
+                bool pixel = line & (1 << row);
+                ssd1306_pixel(cursor_x + col, cursor_y + row, pixel);
+            }
+        }
+
+        cursor_x += 8;
     }
 }
