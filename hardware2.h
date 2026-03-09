@@ -1,8 +1,7 @@
 #ifndef HARDWARE
 #define HARDWARE
 
-#define SDA_PIN 8
-#define SCL_PIN 9
+
 
 #define ROTSTATSTART 10
 #define ROTSTATEND 17
